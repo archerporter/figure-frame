@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Figure and Frame{% endblock %}
+
+{% block body %}
+<div class="ff-page">
+<div class="ff-wrap">
+
+  <!-- Header -->
+  <div class="ff-header">
+    <div>
+      <div class="ff-brand">Figure and Frame</div>
+      <div class="ff-tagline">Movement Analysis</div>
+    </div>
+    <div class="ff-nav">
+      <a href="/about" style="font-size:0.82rem; color:var(--text-muted);">About</a>
+    </div>
+  </div>
+
+  <!-- Intro blurb -->
+  <p class="ff-intro">
+    Figure and Frame analyzes movement data captured with <a href="{{ pp_url }}" target="_blank" rel="noopener">PlatformPose</a>. Select a project below to review&nbsp;per-video movement metrics.
+  </p>
+
+  {% if not projects %}
+  <div class="empty-state">
+    No PlatformPose databases found.
+    Complete a capture session in PlatformPose to create one.
+  </div>
+
+  {% else %}
+
+  <div class="project-grid">
+    {% for p in projects %}
+    {% set vids = corpora[p] %}
+    {% set total_frames = vids | sum(attribute='frames') %}
+    <a href="/project/{{ p }}" class="project-card">
+      <div class="pc-name">{{ p }}</div>
+      <div class="pc-stats">
+        <span>{{ vids | length }} video{% if vids|length != 1 %}s{% endif %}</span>
+        <span class="pc-dot">·</span>
+        <span>{{ total_frames }} frame{% if total_frames != 1 %}s{% endif %}</span>
+      </div>
+      {% if vids %}
+      <div class="pc-latest">
+        Latest: <strong>{{ vids[0].video_id }}</strong>
+        {% if vids[0].duration_s %}
+          &thinsp;·&thinsp; {{ vids[0].duration_s }}s
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="pc-arrow">Analyze →</div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}

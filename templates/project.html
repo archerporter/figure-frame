@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% block title %}{{ project }} — Figure and Frame{% endblock %}
+
+{% block body %}
+<div class="ff-page">
+<div class="ff-wrap">
+
+  <!-- Header -->
+  <div class="ff-header">
+    <div>
+      <a href="/" class="ff-back">← All projects</a>
+      <div class="ff-brand">{{ project }}</div>
+      <div class="ff-tagline">Figure and Frame</div>
+    </div>
+  </div>
+
+  {% if not summary %}
+  <div class="empty-state">No videos found in this project.</div>
+  {% else %}
+
+  <!-- Summary strip -->
+  <div class="project-strip">
+    <span class="strip-stat">
+      <span class="strip-val">{{ summary | length }}</span>
+      <span class="strip-lbl">video{% if summary|length != 1 %}s{% endif %}</span>
+    </span>
+    <span class="strip-sep">·</span>
+    <span class="strip-stat">
+      <span class="strip-val">{{ summary | sum(attribute='frames') }}</span>
+      <span class="strip-lbl">clean frames</span>
+    </span>
+    <span class="strip-sep">·</span>
+    <span class="strip-stat">
+      <span class="strip-val">{{ (summary | sum(attribute='duration_s') or 0) | round(1) }}s</span>
+      <span class="strip-lbl">total duration</span>
+    </span>
+  </div>
+
+  <!-- Video table -->
+  <div class="table-wrap">
+    <table class="ff-table" id="video-table">
+      <thead>
+        <tr>
+          <th>Video ID</th>
+          <th>Frames</th>
+          <th>Duration</th>
+          <th>Retention</th>
+          <th title="Median distal/proximal velocity ratio — higher means more peripheral movement relative to the body core">D/P ratio</th>
+          <th title="X-axis direction changes per second — how often the dancer reverses horizontal direction">X changes /s</th>
+          <th title="Centre-of-mass level changes per second — frequency of rising and falling">Level chg /s</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in summary %}
+        {% set i = loop.index0 %}
+        {% set rp = row.retention_pct %}
+        {% if rp is not none %}
+          {% if rp >= 75 %}{% set rc = '#dcfce7' %}{% set rt = '#14532d' %}
+          {% elif rp >= 50 %}{% set rc = '#fef9c3' %}{% set rt = '#854d0e' %}
+          {% else %}{% set rc = '#fee2e2' %}{% set rt = '#7f1d1d' %}{% endif %}
+        {% endif %}
+        <tr class="video-row" data-project="{{ project }}" data-video="{{ row.video_id }}" data-idx="{{ i }}">
+          <td><strong>{{ row.video_id }}</strong></td>
+          <td>{{ row.frames }}</td>
+          <td>{{ row.duration_s or '—' }}s</td>
+          <td>
+            {% if rp is not none %}
+            <span style="display:inline-flex; align-items:center;
+                         padding:0.15rem 0.42rem; border-radius:999px;
+                         background:{{ rc }}; color:{{ rt }};
+                         font-size:0.72rem; font-weight:700;">{{ rp }}%</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="an-dp"><span class="loading-dot"></span></td>
+          <td class="an-xdir"><span class="loading-dot"></span></td>
+          <td class="an-level"><span class="loading-dot"></span></td>
+          <td style="white-space:nowrap;">
+            <button class="expand-btn" data-idx="{{ i }}" title="Toggle chart" aria-expanded="false">▾</button>
+            <a href="/video/{{ project }}/{{ row.video_id }}" class="ff-link-btn">Analyze →</a>
+          </td>
+        </tr>
+
+        <!-- Expandable chart row -->
+        <tr class="chart-row">
+          <td colspan="8" class="chart-td">
+            <div class="chart-expand-wrap" id="cw-{{ i }}"
+                 data-project="{{ project }}" data-video="{{ row.video_id }}">
+              <div class="chart-inner-pad">
+
+                <div class="chart-inline-loading" id="cloading-{{ i }}">
+                  <span class="spinner"></span>&ensp;Loading…
+                </div>
+
+                <div class="chart-card chart-inline-card" id="ccard-{{ i }}" style="display:none; margin-bottom:0;">
+                  <div class="chart-legend">
+                    <span class="cl-item">
+                      <span class="cl-swatch" style="background:var(--primary); border-radius:2px;"></span>
+                      Distal velocity
+                    </span>
+                    <span class="cl-item">
+                      <span class="cl-swatch" style="background:#9ca3af; border-radius:2px;"></span>
+                      Proximal velocity
+                    </span>
+                    <span class="cl-item">
+                      <span style="display:inline-block; width:1px; height:12px;
+                                   background:#f87171; margin-right:4px; vertical-align:middle;"></span>
+                      X direction change
+                    </span>
+                    <span class="cl-item">
+                      <span class="cl-swatch" style="background:#fbbf24; border-radius:2px;"></span>
+                      CoM height
+                    </span>
+                  </div>
+                  <div class="canvas-outer">
+                    <canvas id="canvas-{{ i }}" style="display:block; width:100%;"></canvas>
+                  </div>
+                  <div class="scrubber-row">
+                    <span class="scrub-time" id="scrub-time-{{ i }}">0.00s</span>
+                    <input type="range" id="scrubber-{{ i }}" min="0" max="1000" value="0"
+                           style="flex:1; accent-color:var(--primary); cursor:pointer; height:4px;">
+                    <span class="scrub-time scrub-total" id="scrub-total-{{ i }}">0.00s</span>
+                  </div>
+                  <div class="insights-list insights-inline" id="insights-{{ i }}"></div>
+                </div>
+
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="table-hint">
+    <strong>D/P ratio</strong> — median distal/proximal velocity ratio.
+    Values &gt;1 indicate peripheral joints moving faster than the body core.
+    &nbsp;·&nbsp;
+    Hover column headers for metric definitions.
+    &nbsp;·&nbsp;
+    Click ▾ to expand the motion chart for a video.
+  </p>
+
+  {% endif %}
+
+</div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+const PRIMARY = getComputedStyle(document.documentElement)
+                  .getPropertyValue('--primary').trim() || '#6d28d9';
+
+// ── Summary fetch (lightweight — summary only) ────────────────────────────────
+document.querySelectorAll('.video-row[data-video]').forEach(tr => {
+  const project   = tr.dataset.project;
+  const video     = tr.dataset.video;
+  const dpCell    = tr.querySelector('.an-dp');
+  const xdirCell  = tr.querySelector('.an-xdir');
+  const levelCell = tr.querySelector('.an-level');
+
+  fetch(`/api/analysis-summary?project=${encodeURIComponent(project)}&video_id=${encodeURIComponent(video)}`)
+    .then(r => r.json())
+    .then(data => {
+      const s = data.summary || {};
+      dpCell.textContent    = s.distal_proximal_ratio   != null ? s.distal_proximal_ratio + '×'  : '—';
+      xdirCell.textContent  = s.x_direction_change_rate != null ? s.x_direction_change_rate + '/s' : '—';
+      levelCell.textContent = s.level_change_rate        != null ? s.level_change_rate + '/s'        : '—';
+    })
+    .catch(() => {
+      dpCell.textContent = xdirCell.textContent = levelCell.textContent = '—';
+    });
+});
+
+// ── Insights rendering ────────────────────────────────────────────────────────
+function renderInsights(insights, idx) {
+  const wrap = document.getElementById(`insights-${idx}`);
+  if (!wrap || !insights || insights.length === 0) return;
+  wrap.innerHTML = insights.map(ins =>
+    `<div class="insight insight-${ins.level}">${ins.text}</div>`
+  ).join('');
+}
+
+// ── Chart state (one entry per expanded row) ──────────────────────────────────
+const chartState = new Map();  // idx -> { data, t, canvas, ctx, scrubber, scrubTime, scrubTot }
+
+function sizeCanvas(canvas) {
+  const outer  = canvas.parentElement;
+  canvas.width  = outer.offsetWidth || 700;
+  canvas.height = Math.round(canvas.width * 0.32);
+}
+
+function drawChart(canvas, ctx, data, t) {
+  if (!data || !data.timeseries) return;
+
+  const W   = canvas.width;
+  const H   = canvas.height;
+  const ts  = data.timeseries;
+  const dur = data.duration_s || 1;
+
+  const L   = 46, R = 10, T = 12, B = 20;
+  const DIV = Math.round(H * 0.56);
+  const CW  = W - L - R;
+  const tx  = time => L + (time / dur) * CW;
+
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fafbff';
+  ctx.fillRect(L, T, CW, DIV - T - 2);
+  ctx.fillStyle = '#fffdf5';
+  ctx.fillRect(L, DIV + 2, CW, H - B - DIV - 2);
+
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(L, DIV); ctx.lineTo(W - R, DIV); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(L, T);   ctx.lineTo(L, H - B);   ctx.stroke();
+
+  // ── Velocity track ──────────────────────────────────────────────────────────
+  const velPts  = ts.filter(p => p.distal_vel != null);
+  const velH    = DIV - T - 6;
+  const allVels = velPts.flatMap(p => [p.distal_vel || 0, p.proximal_vel || 0]);
+  const maxVel  = (Math.max(...allVels) * 1.15) || 1;
+  const vy = v => DIV - 6 - (v / maxVel) * velH;
+
+  ctx.strokeStyle = '#f0f0f5';
+  ctx.lineWidth = 0.8;
+  [0.25, 0.5, 0.75].forEach(f => {
+    const y = vy(maxVel * f);
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(W - R, y); ctx.stroke();
+  });
+
+  // Proximal — gray dashed
+  ctx.strokeStyle = 'rgba(156,163,175,0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  let pen = false;
+  for (const p of velPts) {
+    if (p.proximal_vel == null) { pen = false; continue; }
+    pen ? ctx.lineTo(tx(p.t), vy(p.proximal_vel)) : ctx.moveTo(tx(p.t), vy(p.proximal_vel));
+    pen = true;
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Distal — primary
+  ctx.strokeStyle = PRIMARY.includes('#') ? PRIMARY : '#6d28d9';
+  ctx.globalAlpha = 0.9;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  pen = false;
+  for (const p of velPts) {
+    if (p.distal_vel == null) { pen = false; continue; }
+    pen ? ctx.lineTo(tx(p.t), vy(p.distal_vel)) : ctx.moveTo(tx(p.t), vy(p.distal_vel));
+    pen = true;
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // X direction ticks — coral
+  ctx.strokeStyle = 'rgba(248,113,113,0.80)';
+  ctx.lineWidth = 1.5;
+  for (const p of ts) {
+    if (!p.x_dir_change) continue;
+    const x = tx(p.t);
+    ctx.beginPath(); ctx.moveTo(x, T + 1); ctx.lineTo(x, T + 11); ctx.stroke();
+  }
+
+  // Velocity axis labels
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '9px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('vel', L - 4, T + 9);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#c0c3cf';
+  ctx.fillText(maxVel.toFixed(2), L + 2, T + 9);
+
+  // ── Level track ─────────────────────────────────────────────────────────────
+  const levPts = ts.filter(p => p.com_height != null);
+  const levTop = DIV + 4;
+  const levH   = H - B - levTop;
+
+  if (levPts.length > 1) {
+    const heights = levPts.map(p => p.com_height);
+    const minH = Math.min(...heights);
+    const maxH = Math.max(...heights);
+    const hRng = (maxH - minH) || 0.05;
+    const hy = h => levTop + levH - ((h - minH) / hRng) * levH;
+
+    ctx.strokeStyle = '#f0f0f5';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    const midY = hy((minH + maxH) / 2);
+    ctx.moveTo(L, midY); ctx.lineTo(W - R, midY); ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(tx(levPts[0].t), hy(levPts[0].com_height));
+    for (let i = 1; i < levPts.length; i++)
+      ctx.lineTo(tx(levPts[i].t), hy(levPts[i].com_height));
+    ctx.lineTo(tx(levPts[levPts.length - 1].t), levTop + levH);
+    ctx.lineTo(tx(levPts[0].t), levTop + levH);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(251,191,36,0.12)';
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(251,191,36,0.90)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    pen = false;
+    for (const p of levPts) {
+      pen ? ctx.lineTo(tx(p.t), hy(p.com_height)) : ctx.moveTo(tx(p.t), hy(p.com_height));
+      pen = true;
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('level', L - 4, levTop + 9);
+  }
+
+  // ── Time axis ────────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#c0c3cf';
+  ctx.font = '9px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  const step = dur > 120 ? 20 : dur > 60 ? 10 : dur > 20 ? 5 : 2;
+  for (let tick = 0; tick <= dur; tick += step) {
+    const x = tx(tick);
+    ctx.fillText(tick + 's', x, H - 4);
+    ctx.strokeStyle = '#eeeff3';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, H - B); ctx.stroke();
+  }
+
+  // ── Playhead ─────────────────────────────────────────────────────────────────
+  if (dur > 0) {
+    const px = tx(t);
+    ctx.strokeStyle = 'rgba(109,40,217,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(px, T); ctx.lineTo(px, H - B); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(109,40,217,0.75)';
+    ctx.beginPath(); ctx.arc(px, T + 3, 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ── Expand / collapse ─────────────────────────────────────────────────────────
+document.querySelectorAll('.expand-btn').forEach(btn => {
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    const idx    = this.dataset.idx;
+    const wrap   = document.getElementById(`cw-${idx}`);
+    const isOpen = wrap.classList.contains('open');
+
+    if (isOpen) {
+      wrap.classList.remove('open');
+      this.classList.remove('open');
+      this.textContent = '▾';
+      this.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    wrap.classList.add('open');
+    this.classList.add('open');
+    this.textContent = '▴';
+    this.setAttribute('aria-expanded', 'true');
+
+    // Already loaded — just redraw after CSS transition starts
+    if (chartState.has(idx)) {
+      const s = chartState.get(idx);
+      if (s.data) {
+        setTimeout(() => { sizeCanvas(s.canvas); drawChart(s.canvas, s.ctx, s.data, s.t); }, 10);
+      }
+      return;
+    }
+
+    // First open — wire up elements and fetch full analysis
+    const canvas    = document.getElementById(`canvas-${idx}`);
+    const ctx       = canvas.getContext('2d');
+    const scrubber  = document.getElementById(`scrubber-${idx}`);
+    const scrubTime = document.getElementById(`scrub-time-${idx}`);
+    const scrubTot  = document.getElementById(`scrub-total-${idx}`);
+    const loadingEl = document.getElementById(`cloading-${idx}`);
+    const cardEl    = document.getElementById(`ccard-${idx}`);
+
+    chartState.set(idx, { data: null, t: 0, canvas, ctx, scrubber, scrubTime, scrubTot });
+
+    fetch(`/api/analysis?project=${encodeURIComponent(wrap.dataset.project)}&video_id=${encodeURIComponent(wrap.dataset.video)}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.error) throw new Error(json.error);
+        const s         = chartState.get(idx);
+        s.data          = json;
+        loadingEl.style.display = 'none';
+        cardEl.style.display    = '';
+        scrubTot.textContent    = json.duration_s.toFixed(2) + 's';
+        sizeCanvas(canvas);
+        drawChart(canvas, ctx, json, 0);
+        renderInsights(json.insights, idx);
+      })
+      .catch(err => {
+        loadingEl.innerHTML = `<span style="color:var(--danger)">Failed to load chart: ${err.message}</span>`;
+      });
+
+    scrubber.addEventListener('input', function () {
+      const s = chartState.get(idx);
+      if (!s || !s.data) return;
+      const t = (parseInt(this.value) / 1000) * s.data.duration_s;
+      s.scrubTime.textContent = t.toFixed(2) + 's';
+      s.t = t;
+      drawChart(s.canvas, s.ctx, s.data, t);
+    });
+
+    canvas.addEventListener('click', function (e) {
+      const s = chartState.get(idx);
+      if (!s || !s.data) return;
+      const rect = canvas.getBoundingClientRect();
+      const L = 46, R = 10;
+      const CW   = canvas.width - L - R;
+      const xPx  = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const frac = Math.max(0, Math.min(1, (xPx - L) / CW));
+      const t    = frac * s.data.duration_s;
+      s.scrubber.value        = Math.round(frac * 1000);
+      s.scrubTime.textContent = t.toFixed(2) + 's';
+      s.t = t;
+      drawChart(s.canvas, s.ctx, s.data, t);
+    });
+    canvas.style.cursor = 'crosshair';
+  });
+});
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', function () {
+  chartState.forEach((s, idx) => {
+    const wrap = document.getElementById(`cw-${idx}`);
+    if (s.data && wrap && wrap.classList.contains('open')) {
+      sizeCanvas(s.canvas);
+      drawChart(s.canvas, s.ctx, s.data, s.t);
+    }
+  });
+});
+
+})();
+</script>
+{% endblock %}

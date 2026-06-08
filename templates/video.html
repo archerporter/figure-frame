@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+{% block title %}{{ video_id }} — Figure and Frame{% endblock %}
+
+{% block body %}
+<div class="ff-page">
+<div class="ff-wrap ff-wrap-wide">
+
+  <!-- Header -->
+  <div class="ff-header">
+    <div>
+      <a href="/project/{{ project }}" class="ff-back">← {{ project }}</a>
+      <div class="ff-brand" id="page-title">{{ video_id }}</div>
+      <div class="ff-tagline">Figure and Frame</div>
+    </div>
+    <div class="ff-header-actions">
+      <a href="{{ pp_url }}/visualize?project={{ project }}&video_id={{ video_id }}"
+         target="_blank" rel="noopener"
+         class="btn btn-outline btn-sm">
+        Open in PlatformPose ↗
+      </a>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading-wrap" style="padding:3rem 0; text-align:center; color:var(--text-muted);">
+    <span class="spinner"></span>&ensp;Loading analysis…
+  </div>
+
+  <!-- Error state -->
+  <div id="error-wrap" style="display:none;">
+    <div class="alert alert-error" id="error-msg"></div>
+  </div>
+
+  <!-- Analysis content (hidden until data loads) -->
+  <div id="analysis-wrap" style="display:none;">
+
+    <!-- Summary strip -->
+    <div class="summary-strip" id="summary-strip">
+      <div class="ss-item">
+        <div class="ss-val" id="ss-dp">—</div>
+        <div class="ss-lbl">Distal / Proximal ratio</div>
+      </div>
+      <div class="ss-sep"></div>
+      <div class="ss-item">
+        <div class="ss-val" id="ss-xdir">—</div>
+        <div class="ss-lbl">X direction changes /s</div>
+      </div>
+      <div class="ss-sep"></div>
+      <div class="ss-item">
+        <div class="ss-val" id="ss-level">—</div>
+        <div class="ss-lbl">Level changes /s</div>
+      </div>
+      <div class="ss-sep"></div>
+      <div class="ss-item">
+        <div class="ss-val" id="ss-dur">—</div>
+        <div class="ss-lbl">Duration</div>
+      </div>
+      <div class="ss-sep"></div>
+      <div class="ss-item">
+        <div class="ss-val" id="ss-frames">—</div>
+        <div class="ss-lbl">Clean frames</div>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="insights-list" id="insights-wrap"></div>
+
+    <!-- Skeleton + Chart side by side -->
+    <div class="vc-grid" id="vc-grid">
+
+      <!-- Skeleton column — hidden until PlatformPose data arrives -->
+      <div id="skel-col" style="display:none;">
+        <div class="skel-card">
+          <div class="skel-loading" id="skel-loading">
+            <span class="spinner"></span>&ensp;Loading skeleton…
+          </div>
+          <canvas id="skel-canvas"
+                  style="display:none; width:100%; background:#111827; border-radius:calc(var(--radius) - 2px);"></canvas>
+          <div class="skel-footer" id="skel-footer" style="display:none;">
+            <span id="skel-frame-lbl">—</span>
+            <span class="skel-dot">·</span>
+            <span id="skel-time-lbl">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart column -->
+      <div id="chart-col">
+        <div class="chart-card" style="margin-bottom:0;">
+
+          <div class="chart-legend">
+            <span class="cl-item">
+              <span class="cl-swatch" style="background:var(--primary); border-radius:2px;"></span>
+              Distal velocity
+            </span>
+            <span class="cl-item">
+              <span class="cl-swatch" style="background:#9ca3af; border-radius:2px;"></span>
+              Proximal velocity
+            </span>
+            <span class="cl-item">
+              <span style="display:inline-block; width:1px; height:12px;
+                           background:#f87171; margin-right:4px; vertical-align:middle;"></span>
+              X direction change
+            </span>
+            <span class="cl-item">
+              <span class="cl-swatch" style="background:#fbbf24; border-radius:2px;"></span>
+              CoM height
+            </span>
+          </div>
+
+          <div class="canvas-outer" style="padding-bottom:0.75rem;">
+            <canvas id="analysis-canvas" style="display:block; width:100%;"></canvas>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <!-- end vc-grid -->
+
+    <!-- Shared transport: scrubber + play + speed -->
+    <div class="transport-bar">
+      <button class="tb-play" id="play-btn" title="Play / Pause (Space)">▶</button>
+      <div class="tb-speeds">
+        <button class="speed-btn"    data-speed="0.25">¼×</button>
+        <button class="speed-btn"    data-speed="0.5">½×</button>
+        <button class="speed-btn on" data-speed="1">1×</button>
+        <button class="speed-btn"    data-speed="2">2×</button>
+      </div>
+      <span class="scrub-time" id="scrub-time">0.00s</span>
+      <input type="range" id="scrubber" min="0" max="1000" value="0"
+             style="flex:1; accent-color:var(--primary); cursor:pointer; height:4px;">
+      <span class="scrub-time scrub-total" id="scrub-total">0.00s</span>
+    </div>
+
+    <p class="chart-caption">
+      <strong>Velocity track (top)</strong> — median speed of distal landmarks
+      <span style="color:var(--primary);">━</span> (wrists + ankles) versus
+      proximal landmarks <span style="color:#9ca3af;">╌</span> (shoulders + hips),
+      in normalised units/second. Coral ticks
+      <span style="color:#f87171;">|</span> mark x-axis direction reversals.
+      <strong>Level track (bottom)</strong> — centre-of-mass height above the estimated floor
+      <span style="color:#fbbf24;">━</span>.
+      Use the transport bar to play both views in sync, or drag the scrubber to seek.
+      {% if pp_url %}
+      Skeleton data from PlatformPose at
+      <a href="{{ pp_url }}" target="_blank" rel="noopener">{{ pp_url }}</a>.
+      {% endif %}
+    </p>
+
+    <!-- Methodology note -->
+    <details class="method-details">
+      <summary>Methodology</summary>
+      <div class="method-body">
+        <p>
+          <strong>Distal/Proximal ratio</strong> — at each frame, mean speed
+          of wrist (lm15, lm16) and ankle (lm27, lm28) landmarks divided by mean
+          speed of shoulder (lm11, lm12) and hip (lm23, lm24) landmarks.
+          The summary value is the median across all frames.
+          Values greater than 1× indicate that peripheral joints are moving faster
+          than the body core — consistent with compensatory distal articulation.
+        </p>
+        <p>
+          <strong>X direction changes</strong> — sign reversals per second in the
+          horizontal velocity of the centre of mass. A reversal is counted only
+          when |v<sub>x</sub>| ≥ 0.08 (normalised units/s) to suppress noise.
+        </p>
+        <p>
+          <strong>Level changes</strong> — local minima and maxima per second in the
+          centre-of-mass height above the estimated floor. The floor is computed as
+          the 99th percentile of the maximum foot-landmark y-coordinate across all
+          frames.
+        </p>
+        <p>
+          Landmark coordinates are MediaPipe normalised values (0–1 relative to
+          frame dimensions). Velocities are therefore in frame-widths or
+          frame-heights per second, not metric units.
+        </p>
+      </div>
+    </details>
+
+  </div>
+  <!-- end analysis-wrap -->
+
+</div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+const project = {{ project|tojson }};
+const videoId = {{ video_id|tojson }};
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const loadingEl   = document.getElementById('loading-wrap');
+const errorEl     = document.getElementById('error-wrap');
+const errorMsg    = document.getElementById('error-msg');
+const mainEl      = document.getElementById('analysis-wrap');
+const scrubber    = document.getElementById('scrubber');
+const scrubTime   = document.getElementById('scrub-time');
+const scrubTot    = document.getElementById('scrub-total');
+const chartCanvas = document.getElementById('analysis-canvas');
+const chartCtx    = chartCanvas.getContext('2d');
+const skelCanvas  = document.getElementById('skel-canvas');
+const skelCtx     = skelCanvas.getContext('2d');
+const vcGrid      = document.getElementById('vc-grid');
+const skelCol     = document.getElementById('skel-col');
+const skelLoading = document.getElementById('skel-loading');
+const skelFooter  = document.getElementById('skel-footer');
+const skelFrameLbl = document.getElementById('skel-frame-lbl');
+const skelTimeLbl  = document.getElementById('skel-time-lbl');
+const playBtn     = document.getElementById('play-btn');
+
+// ── Shared playback state ─────────────────────────────────────────────────────
+let data      = null;   // analysis data from /api/analysis
+let skelData  = null;   // frame data from /api/pp-frames
+let currentT  = 0;
+let playing   = false;
+let speed     = 1.0;
+let playStartWall = null;
+let playStartT    = 0;
+let rafId         = null;
+
+// ── MediaPipe skeleton topology ───────────────────────────────────────────────
+const SEGS = {
+  center: [
+    [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],[11,12],[23,24],
+  ],
+  left: [
+    [11,13],[13,15],[15,17],[15,19],[15,21],[17,19],
+    [11,23],[23,25],[25,27],[27,29],[27,31],[29,31],
+  ],
+  right: [
+    [12,14],[14,16],[16,18],[16,20],[16,22],[18,20],
+    [12,24],[24,26],[26,28],[28,30],[28,32],[30,32],
+  ],
+};
+const CLR = {
+  center: [156, 163, 175],
+  left:   [ 96, 165, 250],
+  right:  [248, 113, 113],
+};
+const LM_SIDE = new Array(33).fill('center');
+[1,2,3,7,9,11,13,15,17,19,21,23,25,27,29,31].forEach(i => LM_SIDE[i] = 'left');
+[4,5,6,8,10,12,14,16,18,20,22,24,26,28,30,32].forEach(i => LM_SIDE[i] = 'right');
+
+// ── Fetch both data sources in parallel ───────────────────────────────────────
+const analysisP = fetch(
+  `/api/analysis?project=${encodeURIComponent(project)}&video_id=${encodeURIComponent(videoId)}`
+).then(r => r.json());
+
+const skelP = fetch(
+  `/api/pp-frames?project=${encodeURIComponent(project)}&video_id=${encodeURIComponent(videoId)}`
+).then(r => r.json()).catch(() => null);
+
+Promise.all([analysisP, skelP])
+  .then(([analysis, skel]) => {
+    if (analysis.error) throw new Error(analysis.error);
+
+    data = analysis;
+    loadingEl.style.display = 'none';
+    mainEl.style.display    = '';
+    populateSummary(analysis);
+    populateInsights(analysis.insights);
+    scrubTot.textContent = analysis.duration_s.toFixed(2) + 's';
+
+    sizeChartCanvas();
+    drawChart(0);
+
+    if (skel && !skel.error && skel.frames && skel.frames.length > 0) {
+      skelData = skel;
+      skelLoading.style.display = 'none';
+      skelCanvas.style.display  = 'block';
+      skelFooter.style.display  = '';
+      skelCol.style.display     = '';
+      vcGrid.classList.add('has-skel');
+      // Size both canvases after the grid has reflowed — skeleton column has
+      // zero offsetWidth until it is visible and has-skel is applied.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        sizeChartCanvas();
+        drawChart(0);
+        sizeSkelCanvas();
+        drawSkeleton(0);
+      }));
+    } else {
+      // PlatformPose unavailable or no data — chart stays full-width, no skeleton
+      skelCol.style.display = 'none';
+    }
+  })
+  .catch(err => {
+    loadingEl.style.display = 'none';
+    errorEl.style.display   = '';
+    errorMsg.textContent    = 'Failed to load analysis: ' + err.message;
+  });
+
+// ── Insights ──────────────────────────────────────────────────────────────────
+function populateInsights(insights) {
+  const wrap = document.getElementById('insights-wrap');
+  if (!insights || insights.length === 0) return;
+  wrap.innerHTML = insights.map(ins =>
+    `<div class="insight insight-${ins.level}">${ins.text}</div>`
+  ).join('');
+}
+
+// ── Summary strip ─────────────────────────────────────────────────────────────
+function populateSummary(d) {
+  const s   = d.summary || {};
+  const fmt = (v, unit) => v != null ? v + unit : '—';
+  document.getElementById('ss-dp').textContent    = fmt(s.distal_proximal_ratio,   '×');
+  document.getElementById('ss-xdir').textContent  = fmt(s.x_direction_change_rate, '/s');
+  document.getElementById('ss-level').textContent = fmt(s.level_change_rate,        '/s');
+  document.getElementById('ss-dur').textContent   = d.duration_s.toFixed(2) + 's';
+  document.getElementById('ss-frames').textContent = d.frame_count;
+}
+
+// ── Chart canvas sizing ───────────────────────────────────────────────────────
+function sizeChartCanvas() {
+  const outer = chartCanvas.parentElement;
+  chartCanvas.width  = outer.offsetWidth || 600;
+  chartCanvas.height = Math.round(chartCanvas.width * 0.50);
+}
+
+// ── Skeleton canvas sizing ────────────────────────────────────────────────────
+function sizeSkelCanvas() {
+  if (!skelData || !skelCanvas.parentElement) return;
+  const ar   = skelData.region_height / skelData.region_width;
+  const colW = skelCanvas.parentElement.offsetWidth || 240;
+  // Compact reference height — full skeleton is always available in PlatformPose
+  const maxH = 280;
+  let cw = colW, ch = colW * ar;
+  if (ch > maxH) { ch = maxH; cw = Math.round(ch / ar); }
+  cw = Math.min(cw, colW);
+  skelCanvas.width  = Math.round(cw);
+  skelCanvas.height = Math.round(ch);
+  // Write explicit CSS dimensions so the canvas never CSS-stretches inside its column
+  skelCanvas.style.width  = Math.round(cw) + 'px';
+  skelCanvas.style.height = Math.round(ch) + 'px';
+  skelCanvas.style.margin = '0 auto';
+}
+
+window.addEventListener('resize', function () {
+  sizeChartCanvas();
+  if (skelData) sizeSkelCanvas();
+  drawChart(currentT);
+  if (skelData) drawSkeleton(currentT);
+});
+
+// ── Skeleton drawing ──────────────────────────────────────────────────────────
+function getFrameAt(t) {
+  const frames = skelData.frames;
+  let lo = 0, hi = frames.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (frames[mid].t <= t) lo = mid; else hi = mid - 1;
+  }
+  return lo;
+}
+
+function drawSkeleton(t) {
+  if (!skelData) return;
+  const idx   = getFrameAt(t);
+  const frame = skelData.frames[idx];
+  const W     = skelCanvas.width;
+  const H     = skelCanvas.height;
+
+  skelCtx.fillStyle = '#111827';
+  skelCtx.fillRect(0, 0, W, H);
+
+  // Floor line
+  if (skelData.floor_y != null) {
+    const fy = skelData.floor_y * H;
+    skelCtx.save();
+    skelCtx.strokeStyle = 'rgba(107,114,128,0.55)';
+    skelCtx.lineWidth = 1;
+    skelCtx.setLineDash([8, 5]);
+    skelCtx.beginPath(); skelCtx.moveTo(0, fy); skelCtx.lineTo(W, fy); skelCtx.stroke();
+    skelCtx.restore();
+  }
+
+  // Connections
+  for (const [side, pairs] of Object.entries(SEGS)) {
+    const [r, g, b] = CLR[side];
+    for (const [ai, bi] of pairs) {
+      const la = frame.lms[ai], lb = frame.lms[bi];
+      const alpha = Math.min(la[3], lb[3]) * 0.88;
+      if (alpha < 0.04) continue;
+      skelCtx.lineWidth   = 2;
+      skelCtx.strokeStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+      skelCtx.beginPath();
+      skelCtx.moveTo(la[0] * W, la[1] * H);
+      skelCtx.lineTo(lb[0] * W, lb[1] * H);
+      skelCtx.stroke();
+    }
+  }
+
+  // Joints
+  for (let i = 0; i < 33; i++) {
+    const lm = frame.lms[i];
+    if (lm[3] < 0.04) continue;
+    const [r, g, b] = CLR[LM_SIDE[i]];
+    skelCtx.fillStyle = `rgba(${r},${g},${b},${Math.min(lm[3] + 0.1, 1).toFixed(2)})`;
+    skelCtx.beginPath();
+    skelCtx.arc(lm[0] * W, lm[1] * H, 3.5, 0, Math.PI * 2);
+    skelCtx.fill();
+  }
+
+  // Footer labels
+  skelFrameLbl.textContent = `Frame ${idx + 1} / ${skelData.frame_count}`;
+  skelTimeLbl.textContent  = frame.t.toFixed(3) + 's';
+}
+
+// ── Chart drawing ─────────────────────────────────────────────────────────────
+const PRIMARY = getComputedStyle(document.documentElement)
+                  .getPropertyValue('--primary').trim() || '#6d28d9';
+
+function drawChart(t) {
+  if (!data || !data.timeseries) return;
+  currentT = t;
+
+  const W   = chartCanvas.width;
+  const H   = chartCanvas.height;
+  const ts  = data.timeseries;
+  const dur = data.duration_s || 1;
+
+  const L   = 46, R = 10, T = 12, B = 20;
+  const DIV = Math.round(H * 0.56);
+  const CW  = W - L - R;
+  const tx  = time => L + (time / dur) * CW;
+
+  chartCtx.fillStyle = '#ffffff';
+  chartCtx.fillRect(0, 0, W, H);
+  chartCtx.fillStyle = '#fafbff';
+  chartCtx.fillRect(L, T, CW, DIV - T - 2);
+  chartCtx.fillStyle = '#fffdf5';
+  chartCtx.fillRect(L, DIV + 2, CW, H - B - DIV - 2);
+
+  chartCtx.strokeStyle = '#e5e7eb';
+  chartCtx.lineWidth = 1;
+  chartCtx.setLineDash([]);
+  chartCtx.beginPath(); chartCtx.moveTo(L, DIV); chartCtx.lineTo(W - R, DIV); chartCtx.stroke();
+  chartCtx.beginPath(); chartCtx.moveTo(L, T);   chartCtx.lineTo(L, H - B);   chartCtx.stroke();
+
+  // Velocity track
+  const velPts  = ts.filter(p => p.distal_vel != null);
+  const velH    = DIV - T - 6;
+  const allVels = velPts.flatMap(p => [p.distal_vel || 0, p.proximal_vel || 0]);
+  const maxVel  = (Math.max(...allVels) * 1.15) || 1;
+  const vy = v => DIV - 6 - (v / maxVel) * velH;
+
+  chartCtx.strokeStyle = '#f0f0f5';
+  chartCtx.lineWidth = 0.8;
+  [0.25, 0.5, 0.75].forEach(f => {
+    const y = vy(maxVel * f);
+    chartCtx.beginPath(); chartCtx.moveTo(L, y); chartCtx.lineTo(W - R, y); chartCtx.stroke();
+  });
+
+  chartCtx.strokeStyle = 'rgba(156,163,175,0.75)';
+  chartCtx.lineWidth = 1.5;
+  chartCtx.setLineDash([4, 3]);
+  chartCtx.beginPath();
+  let pen = false;
+  for (const p of velPts) {
+    if (p.proximal_vel == null) { pen = false; continue; }
+    pen ? chartCtx.lineTo(tx(p.t), vy(p.proximal_vel)) : chartCtx.moveTo(tx(p.t), vy(p.proximal_vel));
+    pen = true;
+  }
+  chartCtx.stroke();
+  chartCtx.setLineDash([]);
+
+  chartCtx.strokeStyle = PRIMARY.includes('#') ? PRIMARY : '#6d28d9';
+  chartCtx.globalAlpha = 0.9;
+  chartCtx.lineWidth = 2;
+  chartCtx.beginPath();
+  pen = false;
+  for (const p of velPts) {
+    if (p.distal_vel == null) { pen = false; continue; }
+    pen ? chartCtx.lineTo(tx(p.t), vy(p.distal_vel)) : chartCtx.moveTo(tx(p.t), vy(p.distal_vel));
+    pen = true;
+  }
+  chartCtx.stroke();
+  chartCtx.globalAlpha = 1;
+
+  chartCtx.strokeStyle = 'rgba(248,113,113,0.80)';
+  chartCtx.lineWidth = 1.5;
+  for (const p of ts) {
+    if (!p.x_dir_change) continue;
+    const x = tx(p.t);
+    chartCtx.beginPath(); chartCtx.moveTo(x, T + 1); chartCtx.lineTo(x, T + 11); chartCtx.stroke();
+  }
+
+  chartCtx.fillStyle = '#9ca3af';
+  chartCtx.font = '9px -apple-system, sans-serif';
+  chartCtx.textAlign = 'right';
+  chartCtx.fillText('vel', L - 4, T + 9);
+  chartCtx.textAlign = 'left';
+  chartCtx.fillStyle = '#c0c3cf';
+  chartCtx.fillText(maxVel.toFixed(2), L + 2, T + 9);
+
+  // Level track
+  const levPts = ts.filter(p => p.com_height != null);
+  const levTop = DIV + 4;
+  const levH   = H - B - levTop;
+  if (levPts.length > 1) {
+    const heights = levPts.map(p => p.com_height);
+    const minH = Math.min(...heights), maxH = Math.max(...heights);
+    const hRng = (maxH - minH) || 0.05;
+    const hy = h => levTop + levH - ((h - minH) / hRng) * levH;
+
+    chartCtx.strokeStyle = '#f0f0f5';
+    chartCtx.lineWidth = 0.8;
+    chartCtx.beginPath();
+    chartCtx.moveTo(L, hy((minH + maxH) / 2)); chartCtx.lineTo(W - R, hy((minH + maxH) / 2)); chartCtx.stroke();
+
+    chartCtx.beginPath();
+    chartCtx.moveTo(tx(levPts[0].t), hy(levPts[0].com_height));
+    for (let i = 1; i < levPts.length; i++)
+      chartCtx.lineTo(tx(levPts[i].t), hy(levPts[i].com_height));
+    chartCtx.lineTo(tx(levPts[levPts.length - 1].t), levTop + levH);
+    chartCtx.lineTo(tx(levPts[0].t), levTop + levH);
+    chartCtx.closePath();
+    chartCtx.fillStyle = 'rgba(251,191,36,0.12)';
+    chartCtx.fill();
+
+    chartCtx.strokeStyle = 'rgba(251,191,36,0.90)';
+    chartCtx.lineWidth = 2;
+    chartCtx.beginPath();
+    pen = false;
+    for (const p of levPts) {
+      pen ? chartCtx.lineTo(tx(p.t), hy(p.com_height)) : chartCtx.moveTo(tx(p.t), hy(p.com_height));
+      pen = true;
+    }
+    chartCtx.stroke();
+
+    chartCtx.fillStyle = '#9ca3af';
+    chartCtx.font = '9px -apple-system, sans-serif';
+    chartCtx.textAlign = 'right';
+    chartCtx.fillText('level', L - 4, levTop + 9);
+  }
+
+  // Time axis
+  chartCtx.fillStyle = '#c0c3cf';
+  chartCtx.font = '9px -apple-system, sans-serif';
+  chartCtx.textAlign = 'center';
+  const step = dur > 120 ? 20 : dur > 60 ? 10 : dur > 20 ? 5 : 2;
+  for (let tick = 0; tick <= dur; tick += step) {
+    const x = tx(tick);
+    chartCtx.fillText(tick + 's', x, H - 4);
+    chartCtx.strokeStyle = '#eeeff3';
+    chartCtx.lineWidth = 0.5;
+    chartCtx.beginPath(); chartCtx.moveTo(x, T); chartCtx.lineTo(x, H - B); chartCtx.stroke();
+  }
+
+  // Playhead
+  if (dur > 0) {
+    const px = tx(t);
+    chartCtx.strokeStyle = 'rgba(109,40,217,0.55)';
+    chartCtx.lineWidth = 1.5;
+    chartCtx.setLineDash([3, 3]);
+    chartCtx.beginPath(); chartCtx.moveTo(px, T); chartCtx.lineTo(px, H - B); chartCtx.stroke();
+    chartCtx.setLineDash([]);
+    chartCtx.fillStyle = 'rgba(109,40,217,0.75)';
+    chartCtx.beginPath(); chartCtx.arc(px, T + 3, 3, 0, Math.PI * 2); chartCtx.fill();
+  }
+}
+
+// ── Shared seek (scrubber + canvas click → both views) ────────────────────────
+function seekTo(t) {
+  if (!data) return;
+  t = Math.max(0, Math.min(data.duration_s, t));
+  currentT = t;
+  if (playing) { playStartWall = null; playStartT = t; }
+  scrubber.value        = Math.round((t / data.duration_s) * 1000);
+  scrubTime.textContent = t.toFixed(2) + 's';
+  drawChart(t);
+  if (skelData) drawSkeleton(t);
+}
+
+scrubber.addEventListener('input', function () {
+  if (!data) return;
+  seekTo((parseInt(this.value) / 1000) * data.duration_s);
+});
+
+chartCanvas.addEventListener('click', function (e) {
+  if (!data) return;
+  const rect  = chartCanvas.getBoundingClientRect();
+  const L = 46, R = 10;
+  const CW    = chartCanvas.width - L - R;
+  const xPx   = (e.clientX - rect.left) * (chartCanvas.width / rect.width);
+  seekTo(Math.max(0, Math.min(1, (xPx - L) / CW)) * data.duration_s);
+});
+chartCanvas.style.cursor = 'crosshair';
+
+// ── Playback loop (drives both skeleton and chart playhead) ───────────────────
+function rafTick(now) {
+  if (!playing) return;
+  if (playStartWall === null) { playStartWall = now; }
+
+  const dur = data ? data.duration_s : 0;
+  let t = playStartT + (now - playStartWall) / 1000 * speed;
+
+  if (t >= dur && dur > 0) {
+    t = 0;
+    playStartWall = now;
+    playStartT    = 0;
+  }
+
+  currentT              = t;
+  scrubber.value        = Math.round((t / dur) * 1000);
+  scrubTime.textContent = t.toFixed(2) + 's';
+  drawChart(t);
+  if (skelData) drawSkeleton(t);
+
+  rafId = requestAnimationFrame(rafTick);
+}
+
+function play() {
+  if (!data || playing) return;
+  playing       = true;
+  playStartWall = null;
+  playStartT    = currentT;
+  playBtn.textContent = '⏸';
+  rafId = requestAnimationFrame(rafTick);
+}
+
+function pause() {
+  playing = false;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  playBtn.textContent = '▶';
+}
+
+playBtn.addEventListener('click', () => playing ? pause() : play());
+
+document.addEventListener('keydown', e => {
+  if (!data) return;
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); playing ? pause() : play(); }
+  else if (e.code === 'ArrowLeft')  seekTo(currentT - (1 / 3.5));
+  else if (e.code === 'ArrowRight') seekTo(currentT + (1 / 3.5));
+});
+
+// ── Speed buttons ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    speed = parseFloat(this.dataset.speed);
+    if (playing) { playStartWall = null; playStartT = currentT; }
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+
+})();
+</script>
+{% endblock %}

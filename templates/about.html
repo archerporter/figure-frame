@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}About — Figure and Frame{% endblock %}
+
+{% block body %}
+<div class="ff-page">
+<div class="ff-wrap">
+
+  <div class="ff-header">
+    <div>
+      <a href="/" class="ff-back">← Figure and Frame</a>
+      <div class="ff-brand">About</div>
+      <div class="ff-tagline">Figure and Frame</div>
+    </div>
+  </div>
+
+  <div class="about-body">
+
+    <h2>Overview</h2>
+    <p>
+      Figure and Frame is a movement analysis tool designed for researchers studying
+      how dancers adapt choreography to the constraints of portrait-frame video.
+      It reads pose landmark data captured with
+      <a href="{{ pp_url }}">PlatformPose</a> and computes per-video metrics
+      aimed at the <em>portrait-frame compensation hypothesis</em>: that dancers in
+      short-form, vertically-framed video compensate for restricted horizontal space
+      by increasing distal joint movement, direction changes, and vertical level
+      changes to maintain dynamism.
+    </p>
+
+    <h2>Research Hypothesis</h2>
+    <p>
+      Portrait-frame platforms — TikTok, Instagram Reels, YouTube Shorts — constrain
+      dancers to a vertical aspect ratio that limits lateral movement across the frame.
+      The hypothesis is that dancers negotiate this constraint through three observable
+      compensatory strategies:
+    </p>
+    <ol>
+      <li>
+        <strong>Increased distal articulation.</strong> When whole-body lateral
+        travel is restricted, peripheral joints (wrists, ankles, hands, feet) carry
+        more expressive weight. The distal/proximal velocity ratio captures this:
+        values greater than 1× indicate that peripheral joints are moving faster
+        than the body core.
+      </li>
+      <li>
+        <strong>Frequent direction reversals.</strong> Rather than travelling broadly
+        across the frame, dancers make movement dynamic through rapid changes of
+        horizontal direction. The x-axis direction change rate counts sign reversals
+        per second in the centre-of-mass horizontal velocity.
+      </li>
+      <li>
+        <strong>Vertical level changes.</strong> Rising and falling — plié, relevé,
+        jump, descent — exploit the vertical dimension that portrait framing preserves.
+        The level change rate counts local extrema per second in centre-of-mass height
+        above the estimated floor.
+      </li>
+    </ol>
+
+    <h2>Metrics</h2>
+    <table class="about-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Landmarks used</th>
+          <th>Definition</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Distal / Proximal ratio</strong></td>
+          <td>Wrists (15, 16), ankles (27, 28) vs. shoulders (11, 12), hips (23, 24)</td>
+          <td>Median across frames of mean distal speed ÷ mean proximal speed.
+              Values &gt;1 indicate more peripheral than core movement.</td>
+        </tr>
+        <tr>
+          <td><strong>X direction changes /s</strong></td>
+          <td>Centre of mass (centroid of shoulders + hips)</td>
+          <td>Sign reversals per second in horizontal CoM velocity.
+              Reversals only counted when |v<sub>x</sub>| ≥ 0.08 normalised units/s
+              to suppress noise from small postural shifts.</td>
+        </tr>
+        <tr>
+          <td><strong>Level changes /s</strong></td>
+          <td>Centre of mass</td>
+          <td>Local minima and maxima per second in CoM height above the estimated
+              floor. Floor is the 99th percentile of maximum foot-landmark y across
+              all frames.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      All coordinates are MediaPipe normalised values (0–1 relative to frame
+      dimensions). Velocities are in frame-widths or frame-heights per second,
+      not metric units, and are therefore comparable only within a project whose
+      videos share a consistent capture region.
+    </p>
+
+    <h2>Relationship to PlatformPose</h2>
+    <p>
+      Figure and Frame is a companion to
+      <a href="{{ pp_url }}">PlatformPose</a>, which handles capture,
+      storage, and skeleton visualisation. Figure and Frame reads the same
+      <code>.db</code> files PlatformPose produces and adds no new data — it only
+      interprets what is already there. The two tools are designed to be used
+      together: capture and quality-check in PlatformPose, then analyze in
+      Figure and Frame.
+    </p>
+    <p>
+      Any video analysis page in Figure and Frame includes a direct link to that
+      video's skeleton in PlatformPose, so you can move between interpretive
+      metrics and the underlying movement data without switching contexts.
+    </p>
+
+    <h2>Author</h2>
+    <p>
+      <strong>L. Archer Porter</strong> is a researcher working at the intersection
+      of digital humanities, performance studies, and computational movement analysis.
+      Figure and Frame was developed as part of ongoing research into vernacular dance
+      on short-form video platforms.
+    </p>
+
+  </div>
+
+</div>
+</div>
+{% endblock %}
