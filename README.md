@@ -2,7 +2,7 @@
 
 **Movement analysis for PlatformPose data.**
 
-Figure and Frame is a Flask web application that reads the `.db` files produced by [PlatformPose](https://github.com/archerporter/platformpose) and computes per-video movement metrics from the stored landmark data. It is designed around the portrait-frame compensation hypothesis: the idea that dancers performing for short-form video platforms adapt their movement to the constraints of vertical framing.
+Figure and Frame is a Flask web application that reads the `.db` files produced by [PlatformPose](https://github.com/archerporter/platformpose) and computes per-video movement metrics from the stored landmark data. It is designed to analyze the impact of vertical frame video composition on choreographic logics.
 
 No additional data capture is required. Point Figure and Frame at a directory that already contains PlatformPose databases and it will analyze whatever is there.
 
@@ -107,7 +107,7 @@ Shows a table of all videos in the project with:
 | **Retention** | Percentage of attempted frames that passed the pose filter |
 | **D/P ratio** | Median distal/proximal velocity ratio |
 | **X changes /s** | X-axis direction reversals per second |
-| **Level chg /s** | Centre-of-mass level changes per second |
+| **Level chg /s** | Center-of-mass level changes per second |
 
 Metric values are fetched asynchronously when the page loads. Click **▾** on any row to expand an inline motion chart with a time scrubber. Click **Analyze →** to open the full video detail page.
 
@@ -168,7 +168,7 @@ Landmark coordinates are MediaPipe normalized values (0–1 relative to frame di
 
 Each video analysis page includes a row of plain-English insights derived from the metric values.
 
-| Level | Colour | Meaning |
+| Level | Color | Meaning |
 |---|---|---|
 | **info** | neutral | Metric falls within a normal or interpretable range |
 | **warn** | amber | Metric suggests an unusual pattern worth noting |
@@ -256,7 +256,7 @@ Returns the PlatformPose response as-is, or a `502` error if PlatformPose is not
 
 Figure and Frame was developed as an analysis companion to PlatformPose. Where PlatformPose handles data capture — extracting landmark coordinates from screen recordings — Figure and Frame handles interpretation: turning the raw coordinate sequences into quantitative descriptions of how a dancer moves.
 
-The three metrics operationalize specific predictions from the portrait-frame compensation hypothesis. If dancers performing for short-form portrait video do adapt their movement to the constraints of vertical framing — emphasizing gestures that remain visible in a tightly cropped frame — the distal/proximal ratio should be elevated relative to equivalent performance in non-portrait contexts. The X direction change rate and level change rate offer complementary measures of spatial complexity within the frame.
+The three metrics operationalize specific predictions from the vertical frame compensation hypothesis (i.e., that dancers compensate for the limitations in frame with dynamic movements of their distal joints, as well as frequent horizontal direction changes). If dancers performing for short-form portrait video do adapt their movement to the constraints of vertical framing — emphasizing gestures that remain visible in a tightly situated (or cropped) frame — the distal/proximal ratio should be elevated relative to equivalent performance in non-portrait contexts. The X direction change rate and level change rate offer complementary measures of spatial complexity within the frame.
 
 Both tools are described in relation to each other in the [PlatformPose repository](https://github.com/archerporter/platformpose).
 
@@ -265,7 +265,7 @@ Both tools are described in relation to each other in the [PlatformPose reposito
 ## Author
 
 **L. Archer Porter**  
-Researcher working at the intersection of digital humanities, performance studies, and computational movement analysis.
+Researcher working at the intersection of digital humanities, dance and performance studies, and computational movement analysis.
 
 ---
 
