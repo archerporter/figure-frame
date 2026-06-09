@@ -46,12 +46,12 @@
         <strong>Frequent direction reversals.</strong> Rather than travelling broadly
         across the frame, dancers make movement dynamic through rapid changes of
         horizontal direction. The x-axis direction change rate counts sign reversals
-        per second in the centre-of-mass horizontal velocity.
+        per second in the center-of-mass horizontal velocity.
       </li>
       <li>
         <strong>Vertical level changes.</strong> Rising and falling — plié, relevé,
         jump, descent — exploit the vertical dimension that portrait framing preserves.
-        The level change rate counts local extrema per second in centre-of-mass height
+        The level change rate counts local extrema per second in center-of-mass height
         above the estimated floor.
       </li>
     </ol>
@@ -74,14 +74,14 @@
         </tr>
         <tr>
           <td><strong>X direction changes /s</strong></td>
-          <td>Centre of mass (centroid of shoulders + hips)</td>
+          <td>Center of mass (centroid of shoulders + hips)</td>
           <td>Sign reversals per second in horizontal CoM velocity.
-              Reversals only counted when |v<sub>x</sub>| ≥ 0.08 normalised units/s
+              Reversals only counted when |v<sub>x</sub>| ≥ 0.08 normalized units/s
               to suppress noise from small postural shifts.</td>
         </tr>
         <tr>
           <td><strong>Level changes /s</strong></td>
-          <td>Centre of mass</td>
+          <td>Center of mass</td>
           <td>Local minima and maxima per second in CoM height above the estimated
               floor. Floor is the 99th percentile of maximum foot-landmark y across
               all frames.</td>
@@ -90,7 +90,7 @@
     </table>
 
     <p>
-      All coordinates are MediaPipe normalised values (0–1 relative to frame
+      All coordinates are MediaPipe normalized values (0–1 relative to frame
       dimensions). Velocities are in frame-widths or frame-heights per second,
       not metric units, and are therefore comparable only within a project whose
       videos share a consistent capture region.
@@ -100,7 +100,7 @@
     <p>
       Figure and Frame is a companion to
       <a href="{{ pp_url }}">PlatformPose</a>, which handles capture,
-      storage, and skeleton visualisation. Figure and Frame reads the same
+      storage, and skeleton visualization. Figure and Frame reads the same
       <code>.db</code> files PlatformPose produces and adds no new data — it only
       interprets what is already there. The two tools are designed to be used
       together: capture and quality-check in PlatformPose, then analyze in

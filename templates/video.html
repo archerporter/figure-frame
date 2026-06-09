@@ -137,9 +137,9 @@
       <strong>Velocity track (top)</strong> — median speed of distal landmarks
       <span style="color:var(--primary);">━</span> (wrists + ankles) versus
       proximal landmarks <span style="color:#9ca3af;">╌</span> (shoulders + hips),
-      in normalised units/second. Coral ticks
+      in normalized units/second. Coral ticks
       <span style="color:#f87171;">|</span> mark x-axis direction reversals.
-      <strong>Level track (bottom)</strong> — centre-of-mass height above the estimated floor
+      <strong>Level track (bottom)</strong> — center-of-mass height above the estimated floor
       <span style="color:#fbbf24;">━</span>.
       Use the transport bar to play both views in sync, or drag the scrubber to seek.
       {% if pp_url %}
@@ -162,17 +162,17 @@
         </p>
         <p>
           <strong>X direction changes</strong> — sign reversals per second in the
-          horizontal velocity of the centre of mass. A reversal is counted only
-          when |v<sub>x</sub>| ≥ 0.08 (normalised units/s) to suppress noise.
+          horizontal velocity of the center of mass. A reversal is counted only
+          when |v<sub>x</sub>| ≥ 0.08 (normalized units/s) to suppress noise.
         </p>
         <p>
           <strong>Level changes</strong> — local minima and maxima per second in the
-          centre-of-mass height above the estimated floor. The floor is computed as
+          center-of-mass height above the estimated floor. The floor is computed as
           the 99th percentile of the maximum foot-landmark y-coordinate across all
           frames.
         </p>
         <p>
-          Landmark coordinates are MediaPipe normalised values (0–1 relative to
+          Landmark coordinates are MediaPipe normalized values (0–1 relative to
           frame dimensions). Velocities are therefore in frame-widths or
           frame-heights per second, not metric units.
         </p>

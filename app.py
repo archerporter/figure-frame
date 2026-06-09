@@ -190,11 +190,11 @@ def _generate_insights(summary, retention_pct=None):
         elif lc < 5.0:
             insights.append({'level': 'info',
                 'text': f'Level changes {lc}/s — moderate vertical oscillation; '
-                        f'regular changes in centre-of-mass elevation.'})
+                        f'regular changes in center-of-mass elevation.'})
         else:
             insights.append({'level': 'info',
                 'text': f'Level changes {lc}/s — high vertical oscillation; '
-                        f'frequent and rapid changes in centre-of-mass height.'})
+                        f'frequent and rapid changes in center-of-mass height.'})
 
     # ── Data quality ───────────────────────────────────────────────────────────
     if retention_pct is not None:
