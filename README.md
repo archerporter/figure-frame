@@ -265,7 +265,7 @@ Both tools are described in relation to each other in the [PlatformPose reposito
 ## Author
 
 **L. Archer Porter**  
-Researcher working at the intersection of digital humanities, dance and performance studies, and computational movement analysis.
+Researcher working at the intersection of digital humanities, dance studies, and social media studies.
 
 ---
 
